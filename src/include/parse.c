@@ -56,6 +56,8 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
         }else if(curToken->TokenType == token_scopeEnd){
             curScope = (struct LinkedListEntry*)(LinkedListOffset(scopes, ((struct ParsingScope*)curScope->self)->parentIndex));
         }
+        // now assign the current token to the new scope
+        curToken->ScopeIndex = ((struct ParsingScope*)curScope->self)->index;
         cur = cur->next;
     }
         // print scopes
@@ -77,6 +79,8 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
     }
     // CONTEXTUALIZATION STEP
         // sets context flags for tokens
+        // also corrects the scope for arguments
+        
 
     // NAME TABLING
         // loop through and get function defs and their argc and arg types.

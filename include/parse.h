@@ -72,7 +72,7 @@ struct ParsingToken{
     enum BuiltInTypes Type;
     enum ConditionalTypes Conditional;
     enum OperatorTypes Operator;
-    struct ParsingScope* Scope;
+    int ScopeIndex;
     int DataIndex;
     char* Source;
     int Length;

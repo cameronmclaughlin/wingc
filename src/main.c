@@ -53,5 +53,7 @@ int main(int argc, char* argv[]){
     printf("PARSING\n");
     headEntry = ParseFile(headEntry);
 
+    FreeLinkedList(headEntry);
+
     return 0;
 }
