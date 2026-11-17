@@ -18,3 +18,4 @@ struct LinkedListEntry{
 
 struct LinkedListEntry* CreateLinkedListEntry(size_t memberSize);
 struct LinkedListEntry* LinkedListOffset(struct LinkedListEntry* entry, int offset);
+void FreeLinkedList(struct LinkedListEntry* start);

@@ -76,7 +76,7 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
         cur = LinkedListOffset(entry, index);
     }
     // CONTEXTUALIZATION STEP
-        // fuck this will implement later must focus on scoping
+        // sets context flags for tokens
 
     // NAME TABLING
         // loop through and get function defs and their argc and arg types.

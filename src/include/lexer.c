@@ -187,9 +187,5 @@ struct LinkedListEntry* LexizeFile(char* dir){
         }
     }
 
-    // now that lexing is done. time to parse
-    printf("PARSING\n");
-    ParseFile(headEntry);
-
     return headEntry;
 }

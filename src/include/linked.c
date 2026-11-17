@@ -13,3 +13,14 @@ struct LinkedListEntry* LinkedListOffset(struct LinkedListEntry* entry, int offs
     for(int i = 0; i < offset && entry->next != NULL; i++, entry = entry->next ){}
     return entry->next != NULL ? entry : NULL;
 }
+
+void FreeLinkedList(struct LinkedListEntry* start){
+    struct LinkedListEntry* cur = start;
+    struct LinkedListEntry* next;
+    while(next != NULL){
+        next = cur->next;
+        free(cur->self);
+        free(cur);
+        cur = next;
+    }
+}

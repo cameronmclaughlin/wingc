@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "lexer.h"
+#include "parse.h"
+#include "linked.h"
 
 struct Arguments{
     int outputPos;
@@ -46,7 +48,10 @@ int main(int argc, char* argv[]){
     if(args.inputPos == 0){ printf("No input given, use -i <source file>"); return -1; }
     printf("Compiling %s", argv[args.inputPos]); if(args.outputPos != 0){ printf(" -> %s", argv[args.outputPos]); } printf("\n");
 
-    LexizeFile(argv[args.inputPos]);
+    struct LinkedListEntry* headEntry = LexizeFile(argv[args.inputPos]);
+    // now that lexing is done. time to parse
+    printf("PARSING\n");
+    headEntry = ParseFile(headEntry);
 
     return 0;
 }
