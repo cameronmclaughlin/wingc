@@ -1,44 +1,5 @@
 #include "lexer.h"
 
-struct ParsingLinkedEntry* AllocParsingLinkedEntry(){
-    struct ParsingLinkedEntry* ret = (struct ParsingLinkedEntry*)malloc(sizeof(struct ParsingLinkedEntry));
-    memset((void*)ret, 0, sizeof(struct ParsingLinkedEntry));
-
-    struct ParsingToken* token = (struct ParsingToken*)malloc(sizeof(struct ParsingToken));
-    memset((void*)token, 0, sizeof(struct ParsingToken));
-
-    ret->token = token;
-
-    return ret;
-}
-
-struct ParsingLinkedEntry* FetchParsingLinkedOffset(struct ParsingLinkedEntry* list, int index){
-    struct ParsingLinkedEntry* cur = list;
-    for(int i = 0; cur != NULL && i < index; cur = cur->next, i++){}
-    return cur;
-}
-
-void FreeParsingLinkedEntry(struct ParsingLinkedEntry* list, int index){
-    struct ParsingLinkedEntry* entry = FetchParsingLinkedOffset(list, index);
-    free(entry->token);
-    free(entry);
-}
-
-void FreeParsingLinkedList(struct ParsingLinkedEntry* list){
-    int listLength = 1;
-    struct ParsingLinkedEntry* cur = list;
-    while(true){
-        if(cur->next == NULL){ break; }else{
-            listLength++;
-        }
-    }
-
-    for(int i = listLength; i > 0; i++){
-        FreeParsingLinkedEntry(cur, 0);
-        cur = cur->last;
-    }
-}
-
 char* TokenTypeStrings[] = {
     "{", "}",
     "(", ")",
@@ -75,68 +36,6 @@ char* OperatorTypesString[] = {
 
 bool tokenMatches(char* a, char* b){
     return strncmp(a, b, strlen(b)) == 0;
-}
-
-char* whitespaceString = "\t\n \r\v\f\0";
-
-bool stringInArrayByLength(char* haystack[], int haystackLength, char* needle){
-    for(int i = 0; i < haystackLength; i++){
-        if(tokenMatches(needle, haystack[i])){ return true; } 
-    }
-    return false;
-}
-
-int getNextNonWhitespace(char* data, int start){
-    int i = start;
-    int max = strlen(data);
-    if(start > max || start < 0){ return -1; }
-    //while(strchr(whitespaceString, data[i++] != NULL)){}
-    while(i < max && isspace(data[i++])){}
-    if(i == max){ return -1; }
-    return i-1;
-}
-
-int getNextWhitespace(char* data, int start){
-    int i = start;
-    int max = strlen(data);
-    if(start > max || start < 0){ return -1; }
-    while(i < max && !isspace(data[i++])){}
-    if(i == max){ return -1; }
-    return i-1;
-}
-
-int matchToken(char* data, int start, int* scope, struct ParsingLinkedEntry* entry){
-    entry->token->DataIndex = start;
-    //printf("START = %c\n", data[start]);
-    // check if it is a keyword
-    for(int i = 0; i < IMPLEMENTED_TOKENS; i++){
-        if(tokenMatches(&data[start], TokenTypeStrings[i])){
-            entry->token->TokenType = (enum ParsingTokenType)i;
-            return getNextNonWhitespace(data, getNextWhitespace(data, start));
-        }
-    }
-
-    // check if it is a conditional
-    for(int i = 0; i < IMPLEMENTED_CONDITIONALS; i++){
-        if(tokenMatches(&data[start], ConditionalTypeStrings[i])){
-            entry->token->TokenType = token_conditional;
-            entry->token->Conditional = (enum ConditionalTypes)i;
-            return getNextNonWhitespace(data, start + strlen(ConditionalTypeStrings[i]));
-        }
-    }
-
-    // check if it is a type
-    for(int i = 0; i < IMPLEMENTED_TYPES; i++){
-        if(tokenMatches(&data[start], BuiltInTypesString[i])){
-            entry->token->TokenType = token_type;
-            entry->token->Type = (enum BuiltInTypes)i;
-            return getNextNonWhitespace(data, start + strlen(BuiltInTypesString[i]));
-        }
-    }
-
-    entry->token->TokenType = token_name;
-
-    return getNextNonWhitespace(data, getNextWhitespace(data, start));
 }
 
 void DumpParsingLinkedEntry(struct LinkedListEntry* entry){

@@ -79,10 +79,8 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
         // fuck this will implement later must focus on scoping
 
     // NAME TABLING
-        // this time no linked list. i dont like them. just an array please.
-        // loop through and get names
-
-    // CHECK STEP
+        // loop through and get function defs and their argc and arg types.
+        // also get variable defs and their type
 
     return entry;
 }

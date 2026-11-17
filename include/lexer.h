@@ -11,20 +11,4 @@
 #include "linked.h"
 #include "parse.h"
 
-struct ParsingLinkedEntry{
-    struct ParsingLinkedEntry* last;
-    struct ParsingLinkedEntry* next;
-    struct ParsingToken* token;
-};
-
-struct ScopeIdentifier{
-    char* name;
-};
-
-struct ScopeIdentifierLinkedEntry{
-    struct ScopeIdentifier* last;
-    struct ScopeIdentifier* next;
-    struct ScopeIdentifier* this;
-};
-
 struct LinkedListEntry* LexizeFile(char* dir);
