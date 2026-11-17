@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "parse.h"
+#include "lexer.h"
 
 struct Arguments{
     int outputPos;
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]){
     if(args.inputPos == 0){ printf("No input given, use -i <source file>"); return -1; }
     printf("Compiling %s", argv[args.inputPos]); if(args.outputPos != 0){ printf(" -> %s", argv[args.outputPos]); } printf("\n");
 
-    ParseFile(argv[args.inputPos]);
+    LexizeFile(argv[args.inputPos]);
 
     return 0;
 }
