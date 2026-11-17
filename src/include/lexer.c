@@ -8,6 +8,7 @@ char* TokenTypeStrings[] = {
     "for",
     "!",
     "=",
+    ",",
     ";",
     "TYPE", "COND", 
     "NUMBER", "OPERATOR",
@@ -69,8 +70,6 @@ struct LinkedListEntry* LexizeFile(char* dir){
     struct LinkedListEntry* headEntry = CreateLinkedListEntry(sizeof(struct ParsingToken));
     if(headEntry == NULL){ printf("NO HEAD\n"); return NULL; }
 
-    int lastMatch = 0;
-
     char* src = buffer;
     ((struct ParsingToken*)headEntry->self)->TokenType = token_filestart;
 
@@ -84,7 +83,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
         for(int i = 0; i < IMPLEMENTED_TOKENS; i++){
             if(tokenMatches(src, TokenTypeStrings[i])){
                 next = CreateLinkedListEntry(sizeof(struct ParsingToken));
-                cur->next = next;
+                cur->next = next; next->last = cur;
                 ((struct ParsingToken*)next->self)->TokenType = (enum ParsingTokenType)i;
                 ((struct ParsingToken*)next->self)->Source = src;
                 ((struct ParsingToken*)next->self)->Length = strlen(TokenTypeStrings[i]);
@@ -99,7 +98,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
         for(int i = 0; i < IMPLEMENTED_CONDITIONALS; i++){
             if(tokenMatches(src, ConditionalTypeStrings[i])){
                 next = CreateLinkedListEntry(sizeof(struct ParsingToken));
-                cur->next = next;
+                cur->next = next; next->last = cur;
                 ((struct ParsingToken*)next->self)->TokenType = token_conditional;
                 ((struct ParsingToken*)next->self)->Conditional = (enum ConditionalTypes)i;
                 ((struct ParsingToken*)next->self)->Source = src;
@@ -115,7 +114,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
         for(int i = 0; i < IMPLEMENTED_TYPES; i++){
             if(tokenMatches(src, BuiltInTypesString[i])){
                 next = CreateLinkedListEntry(sizeof(struct ParsingToken));
-                cur->next = next;
+                cur->next = next; next->last = cur;
                 ((struct ParsingToken*)next->self)->TokenType = token_type;
                 ((struct ParsingToken*)next->self)->Type = (enum BuiltInTypes)i;
                 ((struct ParsingToken*)next->self)->Source = src;
@@ -131,7 +130,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
         for(int i = 0; i < IMPLEMENTED_OPERATORS; i++){
             if(tokenMatches(src, OperatorTypesString[i])){
                 next = CreateLinkedListEntry(sizeof(struct ParsingToken));
-                cur->next = next;
+                cur->next = next; next->last = cur;
                 ((struct ParsingToken*)next->self)->TokenType = token_operator;
                 ((struct ParsingToken*)next->self)->Type = (enum BuiltInTypes)i;
                 ((struct ParsingToken*)next->self)->Source = src;
@@ -147,7 +146,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
         // scan for names
         if(isalpha(*src) || *src == '_'){
             next = CreateLinkedListEntry(sizeof(struct ParsingToken));
-            cur->next = next;
+            cur->next = next; next->last = cur;
             int len = 0;
             char* s = src;
             ((struct ParsingToken*)next->self)->Source = src;
@@ -169,7 +168,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
         // scan for numbers
         if(isdigit(*src)){
             next = CreateLinkedListEntry(sizeof(struct ParsingToken));
-            cur->next = next;
+            cur->next = next; next->last = cur;
             int len = 0;
             ((struct ParsingToken*)next->self)->Source = src;
             while(isdigit(*src)){

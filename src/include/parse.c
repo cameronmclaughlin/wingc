@@ -4,7 +4,22 @@ bool tokenOrderMatches(struct LinkedListEntry* entry, enum ParsingTokenType* ord
     struct LinkedListEntry* cur = entry;
     for(int i = 0; cur != NULL && i < orderLen; i++, cur = cur->next){
         struct ParsingToken* curTok = (struct ParsingToken*)cur->self;
-        if(curTok->TokenType != order[i]){ printf("%s != %s (%i)\n", TokenTypeStrings[(int)curTok->TokenType], TokenTypeStrings[order[i]], i); return false; }
+        if(curTok->TokenType != order[i]){ 
+            //printf("%s != %s (%i)\n", TokenTypeStrings[(int)curTok->TokenType], TokenTypeStrings[order[i]], i); 
+            return false; 
+        }
+    }
+    return true;
+}
+
+bool tokenOrderMatchesReverse(struct LinkedListEntry* entry, enum ParsingTokenType* order, int orderLen){
+    struct LinkedListEntry* cur = entry;
+    for(int i = 0; i < orderLen && cur != NULL; i++, cur = cur->last){
+        struct ParsingToken* curTok = (struct ParsingToken*)cur->self;
+        if(curTok->TokenType != order[i]){
+            //printf("%s != %s (%i)\n", TokenTypeStrings[(int)curTok->TokenType], TokenTypeStrings[order[i]], i);
+            return false; 
+        }
     }
     return true;
 }
@@ -80,11 +95,73 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
     // CONTEXTUALIZATION STEP
         // sets context flags for tokens
         // also corrects the scope for arguments
-        
+        // only corrects calls and arguments for now
+    cur = entry;
+    while(cur != NULL){
+        struct ParsingToken* curTok = ((struct ParsingToken*)cur->self);
+        if(curTok->TokenType == token_number){
+            // possible orders for a number argument
+                // NUMBER )
+                // ( NUMBER
+                // NUMBER ,
+                // , NUMBER
+            enum ParsingTokenType order0[2] = {token_number, token_argumentEnd};
+            enum ParsingTokenType order1[2] = {token_argumentStart, token_number};
+            enum ParsingTokenType order2[2] = {token_number, token_separator}; // FWD & BWD
+            if( tokenOrderMatches(cur, order0, 2) || 
+                tokenOrderMatches(cur, order1, 2) ||
+                tokenOrderMatches(cur, order2, 2) ||
+                tokenOrderMatchesReverse(cur, order0, 2)
+            ){
+                curTok->Context |= context_argument;
+                printf("FOUND NUMBER ARGUMENT %.*s\n", curTok->Length, curTok->Source);
+                cur = cur->next;
+                continue;
+            }
+        }else if(curTok->TokenType == token_name){
+            // possible orders for a name argument
+                // NAME )
+                // ( NAME
+                // NAME ,
+                // , NAME
+            enum ParsingTokenType order0[2] = {token_name, token_argumentEnd};
+            enum ParsingTokenType order1[2] = {token_argumentStart, token_name};
+            enum ParsingTokenType order2[2] = {token_name, token_separator}; // FWD & BWD
+            if( tokenOrderMatches(cur, order0, 2) || 
+                tokenOrderMatches(cur, order1, 2) ||
+                tokenOrderMatches(cur, order2, 2) ||
+                tokenOrderMatchesReverse(cur, order0, 2)
+            ){
+                curTok->Context |= context_argument;
+                cur = cur->next;
+                printf("FOUND NAME ARGUMENT %.*s\n", curTok->Length, curTok->Source);
+                continue;
+            }
+            // possible orders for a name call
+                // NAME (
+            // possible orders for a function definition
+                // FUNCTION TYPE NAME (REVERSED)
+            enum ParsingTokenType callOrder[2] = {token_name, token_argumentStart};
+            enum ParsingTokenType fnDefOrder[3] = {token_name, token_type, token_function};
+            if(tokenOrderMatches(cur, callOrder, 2) && !tokenOrderMatchesReverse(cur, fnDefOrder, 3)){
+                curTok->Context |= context_call;
+                cur = cur->next;
+                printf("FOUND NAMECALL %.*s\n", curTok->Length, curTok->Source);
+                continue;
+            }else if(tokenOrderMatchesReverse(cur, fnDefOrder, 3)){
+                curTok->Context |= context_def;
+                cur = cur->next;
+                printf("FOUND FUNCTION DEF %.*s\n", curTok->Length, curTok->Source);
+                continue;
+            }
+        }
+        cur = cur->next;
+    }
 
     // NAME TABLING
         // loop through and get function defs and their argc and arg types.
         // also get variable defs and their type
+    
 
     return entry;
 }

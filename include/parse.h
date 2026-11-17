@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include "linked.h"
 
-#define IMPLEMENTED_TOKENS 10
+#define IMPLEMENTED_TOKENS 11
 #define IMPLEMENTED_CONDITIONALS 6
 #define IMPLEMENTED_TYPES 9
 #define IMPLEMENTED_OPERATORS 6
@@ -25,6 +25,7 @@ enum ParsingTokenType{
     token_for,
     token_preprocessor,
     token_set,
+    token_separator,
     token_end,
     token_type,
     token_conditional,
@@ -67,6 +68,12 @@ struct ParsingScope{
     int index;
 };
 
+enum ContextFlags{
+    context_call = 0x1,
+    context_argument = 0x2,
+    context_def = 0x4
+};
+
 struct ParsingToken{
     enum ParsingTokenType TokenType;
     enum BuiltInTypes Type;
@@ -74,6 +81,7 @@ struct ParsingToken{
     enum OperatorTypes Operator;
     int ScopeIndex;
     int DataIndex;
+    uint16_t Context;
     char* Source;
     int Length;
 };
