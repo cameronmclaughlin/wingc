@@ -1,0 +1,5 @@
+1. Add FPEMDAS
+2. Add preprocessing (!)
+3. Add ASM conversion
+4. Add assembler
+5. Add linker
