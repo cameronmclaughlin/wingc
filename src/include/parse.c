@@ -56,7 +56,7 @@ int checkExpecting(struct LinkedListEntry* entry){
     return 1;
 }
 
-struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
+struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
     // SCOPING STEP
         // linked list with entry of struct ParsingScope
         // go through every token and set up the scopes, linking the scope index to each
@@ -64,21 +64,30 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
     int length = 1;
     struct LinkedListEntry* curScope = scopes;
     struct LinkedListEntry* cur = entry;
+    struct ParsingToken* lastSeenScopeOwner;
     while(cur != NULL){
         struct ParsingToken* curToken = (struct ParsingToken*)cur->self;
-        if(curToken->TokenType == token_scopeStart){
+        // now assign the current token to the new scope
+        curToken->Scope = ((struct ParsingScope*)curScope->self);
+        cur = cur->next;
+        if(
+            curToken->TokenType == token_function ||
+            curToken->TokenType == token_for ||
+            curToken->TokenType == token_while
+        ){
+            // owner
+            lastSeenScopeOwner = curToken;
+        }else if(curToken->TokenType == token_scopeStart){
             struct LinkedListEntry* newScope = CreateLinkedListEntry(sizeof(struct ParsingScope));
             ((struct ParsingScope*)newScope->self)->index = length++;
             ((struct ParsingScope*)newScope->self)->parentIndex = ((struct ParsingScope*)curScope->self)->index;
+            ((struct ParsingScope*)newScope->self)->owner = lastSeenScopeOwner;
             curScope->next = newScope;
             newScope->last = curScope;
             curScope = newScope;
         }else if(curToken->TokenType == token_scopeEnd){
             curScope = (struct LinkedListEntry*)(LinkedListOffset(scopes, ((struct ParsingScope*)curScope->self)->parentIndex));
         }
-        // now assign the current token to the new scope
-        curToken->ScopeIndex = ((struct ParsingScope*)curScope->self)->index;
-        cur = cur->next;
     }
         // print scopes
     cur = scopes;
@@ -157,15 +166,16 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
                 // FUNCTION TYPE NAME (REVERSED)
             enum ParsingTokenType callOrder[2] = {token_name, token_argumentStart};
             enum ParsingTokenType fnDefOrder[3] = {token_name, token_type, token_function};
-            if(tokenOrderMatches(cur, callOrder, 2) && !tokenOrderMatchesReverse(cur, fnDefOrder, 3)){
+            bool fnDef = tokenOrderMatchesReverse(cur, fnDefOrder, 3);
+            if(tokenOrderMatches(cur, callOrder, 2) && !fnDef){
                 curTok->Context |= context_call;
                 cur = cur->next;
                 printf("FOUND NAMECALL %.*s\n", curTok->Length, curTok->Source);
                 continue;
             }
-            
-            if(tokenOrderMatchesReverse(cur, fnDefOrder, 3)){
-                curTok->Context |= context_def | context_function;
+
+            if(fnDef){
+                curTok->Context |= (context_def | context_function);
                 cur = cur->next;
                 printf("FOUND FUNCTION DEF %.*s\n", curTok->Length, curTok->Source);
                 continue;
@@ -191,8 +201,9 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
                 curTok->Context |= context_return_type;
                 cur = cur->next;
                 // set cur->next context to have function since its a name
-                ((struct ParsingToken*)cur->self)->Context |= context_function;
+                //((struct ParsingToken*)cur->self)->Context |= context_function;
                 printf("FOUND RETURN TYPE %.*s\n", curTok->Length, curTok->Source);
+                continue;
             }
             // possible orders for a variable definition
                 // TYPE NAME
@@ -203,6 +214,7 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
                 nextTok->Type = curTok->Type;
                 curTok->Context |= context_def;
                 printf("FOUND VARIABLE DEF %.*s TYPE %.*s\n", nextTok->Length, nextTok->Source, curTok->Length, curTok->Source);
+                continue;
             }
         }
         cur = cur->next;
@@ -295,7 +307,10 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
         }
     }
 
-    FreeLinkedList(NameTable);
+    struct ParsingResult* result = (struct ParsingResult*)malloc(sizeof(struct ParsingResult));
+    result->NameTable = NameTable;
+    result->TokenList = entry;
+    result->ScopeList = scopes;
 
-    return entry;
+    return result;
 }

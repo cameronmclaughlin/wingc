@@ -16,6 +16,8 @@ Lexing is kinda beginner but I'll improve later. Just loops through every charac
 ## Parsing
 Parsing is a lil more complex. Not as complete.
 Parsing Steps:
+- Preprocessing
+	- Identifies preprocessing macros and applies them to the context
 - Scoping
 	- Goes through tokens, creates scopes. Assigns the current scope to each token it see's.
 - Ordering
@@ -72,6 +74,8 @@ Parsing Steps:
 		enum ParsingTokenType[128];	
 	};
 	```
+- FPEMDAS
+	- Creates a binary tree for each math statement
 
 ## Convention
 The calling convention is custom because I didn't want to re-learn GCC conventions after ChOS.

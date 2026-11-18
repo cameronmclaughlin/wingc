@@ -10,5 +10,6 @@
 #include <ctype.h>
 #include "linked.h"
 #include "parse.h"
+#include "types.h"
 
 struct LinkedListEntry* LexizeFile(char* dir);

@@ -72,6 +72,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
 
     char* src = buffer;
     ((struct ParsingToken*)headEntry->self)->TokenType = token_filestart;
+    ((struct ParsingToken*)headEntry->self)->Source = buffer;
 
     int index = 0;
     struct LinkedListEntry *cur, *next; cur = headEntry;
