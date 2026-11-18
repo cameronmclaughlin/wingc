@@ -3,3 +3,4 @@
 3. Add ASM conversion
 4. Add assembler
 5. Add linker
+6. Create wingstd
