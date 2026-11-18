@@ -71,7 +71,9 @@ struct ParsingScope{
 enum ContextFlags{
     context_call = 0x1,
     context_argument = 0x2,
-    context_def = 0x4
+    context_def = 0x4,
+    context_return_type = 0x8,
+    context_function = 0x10
 };
 
 struct ParsingToken{
@@ -84,6 +86,27 @@ struct ParsingToken{
     uint16_t Context;
     char* Source;
     int Length;
+};
+
+enum NameTableStatus{
+    table_definition,
+    table_promised,
+    table_reference
+};
+
+enum NameTableType{
+    tabledef_function,
+    tabledef_variable
+};
+
+struct NameTableEntry{
+    char* name;
+    size_t nameLength;
+    int argc; // MAX 32
+    struct ParsingToken* argv[32];
+    enum ParsingTokenType ReturnType;
+    enum NameTableStatus Status;
+    enum NameTableType Type;
 };
 
 extern char* TokenTypeStrings[];

@@ -41,6 +41,11 @@ int checkExpecting(struct LinkedListEntry* entry){
         printf("TOKEN TYPE\n");
         enum ParsingTokenType order0[3] = {token_type, token_name, token_end};
         enum ParsingTokenType order1[3] = {token_type, token_name, token_set};
+        enum ParsingTokenType order3[3] = {token_type, token_name, token_separator};
+        enum ParsingTokenType order4[3] = {token_type, token_name, token_argumentEnd};
+        if(tokenOrderMatches(entry, order3, 3) || tokenOrderMatches(entry, order4, 3)){
+            return 3;
+        }
         if((int)tok->Type < 4){
             // is a number
             enum ParsingTokenType setNumberOrder[5] = {token_type, token_name, token_set, token_number, token_end};
@@ -99,6 +104,10 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
     cur = entry;
     while(cur != NULL){
         struct ParsingToken* curTok = ((struct ParsingToken*)cur->self);
+        if(curTok->Context != 0){
+            cur = cur->next;
+            continue;
+        }
         if(curTok->TokenType == token_number){
             // possible orders for a number argument
                 // NUMBER )
@@ -124,13 +133,18 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
                 // ( NAME
                 // NAME ,
                 // , NAME
-            enum ParsingTokenType order0[2] = {token_name, token_argumentEnd};
+            // specific impossible order that should be ignored if others match for a name argument
+                // TYPE NAME
+            enum ParsingTokenType order0[2] = {token_name, token_argumentEnd}; 
             enum ParsingTokenType order1[2] = {token_argumentStart, token_name};
             enum ParsingTokenType order2[2] = {token_name, token_separator}; // FWD & BWD
-            if( tokenOrderMatches(cur, order0, 2) || 
+            enum ParsingTokenType impossible[2] = {token_name, token_type}; // BWD
+            if( (tokenOrderMatches(cur, order0, 2) || 
                 tokenOrderMatches(cur, order1, 2) ||
                 tokenOrderMatches(cur, order2, 2) ||
-                tokenOrderMatchesReverse(cur, order0, 2)
+                tokenOrderMatchesReverse(cur, order0, 2))
+                &&
+                !tokenOrderMatchesReverse(cur, impossible, 2)
             ){
                 curTok->Context |= context_argument;
                 cur = cur->next;
@@ -148,20 +162,140 @@ struct LinkedListEntry* ParseFile(struct LinkedListEntry* entry){
                 cur = cur->next;
                 printf("FOUND NAMECALL %.*s\n", curTok->Length, curTok->Source);
                 continue;
-            }else if(tokenOrderMatchesReverse(cur, fnDefOrder, 3)){
-                curTok->Context |= context_def;
+            }
+            
+            if(tokenOrderMatchesReverse(cur, fnDefOrder, 3)){
+                curTok->Context |= context_def | context_function;
                 cur = cur->next;
                 printf("FOUND FUNCTION DEF %.*s\n", curTok->Length, curTok->Source);
                 continue;
             }
+        }else if(curTok->TokenType == token_type){
+            // possible orders for input argument
+                // TYPE NAME SEPARATOR
+                // TYPE NAME )
+            enum ParsingTokenType order0[3] = {token_type, token_name, token_separator};
+            enum ParsingTokenType order1[3] = {token_type, token_name, token_argumentEnd};
+            if(tokenOrderMatches(cur, order0, 3) || tokenOrderMatches(cur, order1, 3)){
+                curTok->Context |= context_argument | context_def;
+                struct ParsingToken* nextTok = ((struct ParsingToken*)cur->next->self);
+                nextTok->Type = curTok->Type;
+                cur = cur->next;
+                printf("FOUND INPUT ARG %.*s\n", curTok->Length, curTok->Source);
+                continue;
+            }
+            // possible orders for return type
+                // TYPE FN (REVERSE)
+            enum ParsingTokenType returnOrder[2] = {token_type, token_function};
+            if(tokenOrderMatchesReverse(cur, returnOrder, 2)){
+                curTok->Context |= context_return_type;
+                cur = cur->next;
+                // set cur->next context to have function since its a name
+                ((struct ParsingToken*)cur->self)->Context |= context_function;
+                printf("FOUND RETURN TYPE %.*s\n", curTok->Length, curTok->Source);
+            }
+            // possible orders for a variable definition
+                // TYPE NAME
+                    // will set the BuiltInTypes of NAME to TYPE
+            enum ParsingTokenType varDef[2] = {token_type, token_name};
+            if(tokenOrderMatches(cur, varDef, 2)){
+                struct ParsingToken* nextTok = ((struct ParsingToken*)cur->next->self);
+                nextTok->Type = curTok->Type;
+                curTok->Context |= context_def;
+                printf("FOUND VARIABLE DEF %.*s TYPE %.*s\n", nextTok->Length, nextTok->Source, curTok->Length, curTok->Source);
+            }
         }
         cur = cur->next;
     }
-
     // NAME TABLING
         // loop through and get function defs and their argc and arg types.
         // also get variable defs and their type
-    
+    struct LinkedListEntry* NameTable = CreateLinkedListEntry(sizeof(struct NameTableEntry));
+    struct LinkedListEntry* CurNameTable = NameTable;
+    for(cur = entry; cur != NULL; cur = cur->next){
+        struct ParsingToken* curTok = ((struct ParsingToken*)cur->self);
+        if(curTok->TokenType == token_function){
+            // wooo yay new function def fuckkkk
+            struct ParsingToken* nameTok = ((struct ParsingToken*)cur->next->next->self);
+            if(nameTok->TokenType != token_name || !(nameTok->Context & context_argument | context_def)){
+                printf("Error: expected token_name but got %i\n", nameTok->TokenType);
+                break;
+            }
+            struct LinkedListEntry* NewNameTable = CreateLinkedListEntry(sizeof(struct NameTableEntry));
+            struct NameTableEntry* nte = ((struct NameTableEntry*)NewNameTable->self);
+            nte->name = nameTok->Source;
+            nte->nameLength = nameTok->Length;
+            nte->Type = tabledef_function;
+            // next token should be token_type with context flag of context_return_type
+            struct ParsingToken* retTypeTok = ((struct ParsingToken*)cur->next->self);
+            if(retTypeTok->TokenType != token_type || !(retTypeTok->Context & context_return_type)){
+                printf("Error: expect token_type but got %i\n", retTypeTok->TokenType);
+                break;
+            }
+
+            // okay now loop through and get each argument and its type until we hit a token_argumentEnd
+            int argc = 0;
+            struct LinkedListEntry* curArgs;
+            struct ParsingToken* curArgT;
+            // cur is fn
+            // fn none main(i8
+            // quad next would hit the i8
+            for(curArgs = cur->next->next->next->next; curArgs != NULL; curArgs = curArgs->next){
+                curArgT = ((struct ParsingToken*)curArgs->self);
+                if(curArgT->TokenType == token_argumentEnd){
+                    nte->argc = argc;
+                    break;
+                }else if(curArgT->TokenType == token_type && (curArgT->Context & (context_argument | context_def))){
+                    // is an argument
+                    printf("FOUND ARG\n");
+                    nte->argv[argc] = ((struct ParsingToken*)curArgs->next->self); // argv[argc] points to the name
+                    argc++;
+                }
+            }
+
+            CurNameTable->next = NewNameTable;
+            NewNameTable->last = CurNameTable;
+            CurNameTable = NewNameTable;
+        }else if(curTok->TokenType == token_type){
+            // must be a variable def, no explicit conversions (yet). much simpler since no args
+            if(curTok->Context & context_return_type){
+                continue;
+            }
+            struct ParsingToken* nameTok = ((struct ParsingToken*)cur->next->self);
+            if(nameTok->TokenType != token_name || !(nameTok->Context & context_argument | context_def)){
+                printf("Error: expected token_name but got %i\n", nameTok->TokenType);
+                break;
+            }
+            struct LinkedListEntry* NewNameTable = CreateLinkedListEntry(sizeof(struct NameTableEntry));
+            struct NameTableEntry* nte = ((struct NameTableEntry*)NewNameTable->self);
+            nte->name = nameTok->Source;
+            nte->nameLength = nameTok->Length;
+            nte->Type = tabledef_variable;
+            nte->argc = 1;
+            nte->argv[0] = nameTok;
+
+            CurNameTable->next = NewNameTable;
+            NewNameTable->last = CurNameTable;
+            CurNameTable = NewNameTable;
+        }
+    }
+    // loop through nametable and get all data
+    struct LinkedListEntry* curTable = NameTable;
+    for(curTable = NameTable; curTable != NULL; curTable = curTable->next){
+        struct NameTableEntry* curNTE = (struct NameTableEntry*)curTable->self;
+        if(curNTE->Type == tabledef_function){
+            printf("FUNCTION %.*s ARGC %i\n", curNTE->nameLength, curNTE->name, curNTE->argc);
+            for(int i = 0; i < curNTE->argc; i++){
+                printf("\t%s %.*s\n", BuiltInTypesString[(int)curNTE->argv[i]->Type], curNTE->argv[i]->Length, curNTE->argv[i]->Source);
+                struct ParsingToken* tok = curNTE->argv[i];
+                //printf("\t%.*s (%s)\n", tok->Length, tok->Source);
+            }
+        }else if(curNTE->Type == tabledef_variable){
+            printf("VARIABLE %.*s TYPE %s\n", curNTE->nameLength, curNTE->name, BuiltInTypesString[(int)curNTE->argv[0]->Type]);
+        }
+    }
+
+    FreeLinkedList(NameTable);
 
     return entry;
 }
