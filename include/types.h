@@ -85,7 +85,7 @@ struct ParsingToken{
 
 enum NameTableStatus{
     table_definition,
-    table_promised,
+    table_promise,
     table_reference
 };
 

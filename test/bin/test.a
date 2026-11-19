@@ -1,2 +1,4 @@
 main:
+	call foo
+	call foo0
 ret

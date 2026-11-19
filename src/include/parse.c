@@ -57,10 +57,18 @@ int checkExpecting(struct LinkedListEntry* entry){
 }
 
 struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
+    struct ParsingResult* result = (struct ParsingResult*)malloc(sizeof(struct ParsingResult));
+
+    struct LinkedListEntry* scopes = CreateLinkedListEntry(sizeof(struct ParsingScope));
+    struct LinkedListEntry* NameTable = CreateLinkedListEntry(sizeof(struct NameTableEntry));
+
+    result->NameTable = NameTable;
+    result->TokenList = entry;
+    result->ScopeList = scopes;
+        
     // SCOPING STEP
         // linked list with entry of struct ParsingScope
         // go through every token and set up the scopes, linking the scope index to each
-    struct LinkedListEntry* scopes = CreateLinkedListEntry(sizeof(struct ParsingScope));
     int length = 1;
     struct LinkedListEntry* curScope = scopes;
     struct LinkedListEntry* cur = entry;
@@ -222,7 +230,6 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
     // NAME TABLING
         // loop through and get function defs and their argc and arg types.
         // also get variable defs and their type
-    struct LinkedListEntry* NameTable = CreateLinkedListEntry(sizeof(struct NameTableEntry));
     struct LinkedListEntry* CurNameTable = NameTable;
     for(cur = entry; cur != NULL; cur = cur->next){
         struct ParsingToken* curTok = ((struct ParsingToken*)cur->self);
@@ -265,6 +272,40 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
                 }
             }
 
+            // finally go from final arg to token_argumentEnd to determine the status
+                // okay so at final arg name, these are the combination matches
+                // DEFINITION
+                    // NAME (w/ context_argument) ARGUMENTEND SCOPESTART
+                // PROMISED
+                    // NAME (w/ context_argument) ARGUMENTEND END
+            struct LinkedListEntry* argEnd = NULL;
+            struct LinkedListEntry* curArgEnd;
+            for(curArgEnd = cur; curArgEnd != NULL; curArgEnd = curArgEnd->next){
+                struct ParsingToken* tok = (struct ParsingToken*)curArgEnd->self;
+                if(tok->TokenType == token_argumentEnd){
+                    printf("ooo end\n");
+                    argEnd = curArgEnd;
+                    break;
+                }
+            }
+
+            // wooo found it
+            // so now check it
+            enum ParsingTokenType defOrder[2] = {token_argumentEnd, token_scopeStart};
+            enum ParsingTokenType promiseOrder[2] = {token_argumentEnd, token_end};
+            if(tokenOrderMatches(argEnd, defOrder, 2)){
+                // is a def
+                nte->Status = table_definition;
+                printf("DEFINITION\n");
+            }else if(tokenOrderMatches(argEnd, promiseOrder, 2)){
+                // is a promise
+                nte->Status = table_promise;
+                printf("PROMISE\n");
+            }else{
+                printf("ERROR: invalid function definition combination\n");
+                return result;
+            }
+
             CurNameTable->next = NewNameTable;
             NewNameTable->last = CurNameTable;
             CurNameTable = NewNameTable;
@@ -289,6 +330,11 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             CurNameTable->next = NewNameTable;
             NewNameTable->last = CurNameTable;
             CurNameTable = NewNameTable;
+        }else if(curTok->TokenType == token_name){
+            if(curTok->Context & context_call){
+                // okay sweet its a call so now we add it to the table as a reference
+                
+            }
         }
     }
     // loop through nametable and get all data
@@ -306,11 +352,6 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             printf("VARIABLE %.*s TYPE %s\n", curNTE->nameLength, curNTE->name, BuiltInTypesString[(int)curNTE->argv[0]->Type]);
         }
     }
-
-    struct ParsingResult* result = (struct ParsingResult*)malloc(sizeof(struct ParsingResult));
-    result->NameTable = NameTable;
-    result->TokenList = entry;
-    result->ScopeList = scopes;
 
     return result;
 }

@@ -80,20 +80,29 @@ void asm_label(struct NameTableEntry* nte){
     asmIndent++;
 }
 
+void asm_call(struct NameTableEntry* nte){
+    asm_indent(asmIndent);
+    dprintf(asmFD, "call %.*s\n", nte->nameLength, nte->name);
+}
+
 void asm_push(ASMRegister* reg){
+    asm_indent(asmIndent);
     dprintf(asmFD, "push %s\n", lookupRegister(reg));
 }
 
 void asm_pop(ASMRegister* reg){
+    asm_indent(asmIndent);
     dprintf(asmFD, "pop %s\n", lookupRegister(reg));
 }
 
 void asm_ret(){
     asmIndent--;
+    asm_indent(asmIndent);
     dprintf(asmFD, "ret");
 }
 
 void asm_retr(ASMRegister* reg){
+    asm_indent(asmIndent);
     dprintf(asmFD, "push %s\nret\n", lookupRegister(reg));
 }
 
@@ -131,10 +140,23 @@ void OutputASM(char* dir, struct ParsingResult* parsed){
         struct ParsingToken* curTok = (struct ParsingToken*)cur->self;
         if(curTok->TokenType == token_name){
             if(curTok->Context & context_def && curTok->Context & context_function){
-                struct NameTableEntry* nte = EntryByName(parsed->NameTable, curTok->Source, curTok->Length);
+                struct NameTableEntry* nte = DefEntryByName(parsed->NameTable, curTok->Source, curTok->Length);
                 if(nte == NULL){ printf("FAILURE: couldn't find name\n"); return; };
+                if(nte->Status == table_promise){ 
+                    // ignore since it's defined in a separate file
+                    continue;
+                }
                 printf("%.*s\n", nte->nameLength, nte->name);
                 asm_label(nte);
+            }else if(curTok->Context & context_call){
+                struct NameTableEntry* nte = DefEntryByName(parsed->NameTable, curTok->Source, curTok->Length);
+                if(nte == NULL){ printf("FAILURE: couldn't find name\n"); return; };
+                printf("call %.*s\n", nte->nameLength, nte->name);
+
+                // arg check
+                
+
+                asm_call(nte);
             }
         }else if(curTok->TokenType == token_scopeEnd){
             switch (curTok->Scope->owner->TokenType){

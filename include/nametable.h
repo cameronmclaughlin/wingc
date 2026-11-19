@@ -11,4 +11,4 @@
 #include "types.h"
 #include "linked.h"
 
-struct NameTableEntry* EntryByName(struct LinkedListEntry* list, char* name, size_t len);
+struct NameTableEntry* DefEntryByName(struct LinkedListEntry* list, char* name, size_t len);
