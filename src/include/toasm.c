@@ -74,6 +74,11 @@ void asm_movri(ASMRegister* set, uint64_t give, DataSize size){
     dprintf(asmFD, "mov %s, %i\n", lookupRegister(set), masked);
 }
 
+void asm_movrn(ASMRegister* set, char* name, size_t nameLen, DataSize size){
+    asm_indent(asmIndent);
+    dprintf(asmFD, "mov %s, [%.*s]\n", lookupRegister(set), nameLen, name);
+}
+
 void asm_label(struct NameTableEntry* nte){
     asm_indent(asmIndent);
     dprintf(asmFD, "%.*s:\n", nte->nameLength, nte->name);
@@ -126,6 +131,18 @@ void asmWrapperTest(char* dir){
     close(asmFD);
 }
 
+DataSize typeSizes[] = {
+    b, // i8
+    w, // i16
+    d, // i32
+    l, // i64
+    b, // ch
+    l, // none
+    l, // point
+    l, // addr
+    l  // arr
+};
+
 void OutputASM(char* dir, struct ParsingResult* parsed){
     // small mini ASM output meant to be used with test/src/prealpha.w
     // outputs a label and some calls with args
@@ -153,8 +170,26 @@ void OutputASM(char* dir, struct ParsingResult* parsed){
                 if(nte == NULL){ printf("FAILURE: couldn't find name\n"); return; };
                 printf("call %.*s\n", nte->nameLength, nte->name);
 
-                // arg check
-                
+                // push args, no checking needed as parse.c does that
+                struct LinkedListEntry* curArg;
+                struct ParsingToken* curArgT;
+                int seenArgs = 0;
+                ASMRegister pushReg; pushReg.AMD = rdx; pushReg.ARM = x8;
+                for(curArg = cur; curArg != NULL; curArg = curArg->next){
+                    curArgT = (struct ParsingToken*)curArg->self;
+                    if(curArgT->TokenType == token_number){
+                        char tmp[128]; snprintf(tmp, 128, "%.*s", curArgT->Length, curArgT->Source);
+                        char* endptr = NULL;
+                        uint64_t give = strtoull(tmp, &endptr, 10);
+                        DataSize size = typeSizes[(int)nte->argv[seenArgs++]->Type];
+                        asm_movri(&pushReg, give, size);
+                        asm_push(&pushReg);
+                    }else if(curArgT->TokenType == token_name){
+
+                    }else if(curArgT->TokenType == token_argumentEnd){
+                        break;
+                    }
+                }
 
                 asm_call(nte);
             }

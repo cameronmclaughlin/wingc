@@ -245,6 +245,7 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             nte->name = nameTok->Source;
             nte->nameLength = nameTok->Length;
             nte->Type = tabledef_function;
+            nte->ReturnType = ((struct ParsingToken*)cur->next->self)->Type;
             // next token should be token_type with context flag of context_return_type
             struct ParsingToken* retTypeTok = ((struct ParsingToken*)cur->next->self);
             if(retTypeTok->TokenType != token_type || !(retTypeTok->Context & context_return_type)){
@@ -333,7 +334,52 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
         }else if(curTok->TokenType == token_name){
             if(curTok->Context & context_call){
                 // okay sweet its a call so now we add it to the table as a reference
+                struct LinkedListEntry* NewNameTable = CreateLinkedListEntry(sizeof(struct NameTableEntry));
+                struct NameTableEntry* nte = ((struct NameTableEntry*)NewNameTable->self);
+                nte->name = curTok->Source;
+                nte->nameLength = curTok->Length;
+                nte->Type = tabledef_function;
                 
+                struct NameTableEntry* def = DefEntryByName(NameTable, nte->name, nte->nameLength);
+                if(def == NULL){
+                    printf("ERROR: implicit call to %.*s\n", nte->nameLength, nte->name);
+                    return result;
+                }
+
+                int argc = 0;
+                struct LinkedListEntry* curArgs;
+                struct ParsingToken* curArgT;
+                // cur is name AND call
+                // main(i8
+                // double next would hit the i8
+                for(curArgs = cur->next->next; curArgs != NULL; curArgs = curArgs->next){
+                    curArgT = ((struct ParsingToken*)curArgs->self);
+                    if(curArgT->TokenType == token_argumentEnd){
+                        nte->argc = argc;
+                        break;
+                    }else if(curArgT->TokenType == token_name || curArgT->TokenType == token_number){
+                        // is an argument
+                        printf("FOUND ARG\n");
+                        if(argc > def->argc-1){ 
+                            printf("ERROR: too many arguments provided (expected %i got %i)\n", def->argc, argc+1);
+                            return result;
+                        }
+                        if(def->argv[argc]->Type != curArgT->Type){
+                            printf("ERROR on call %.*s (looking for %s, found %s)\n", nte->nameLength, nte->name, BuiltInTypesString[(int)def->argv[argc]->Type], BuiltInTypesString[(int)curArgT->Type]);
+                            return result;
+                        }
+                        nte->argv[argc++] = curArgT; // argv[argc] points to the name
+                    }
+                }
+
+                if(def->argc != nte->argc){
+                    printf("ERR, argc mismatch (expected %i, got %i)\n", def->argc, nte->argc);
+                    return result;
+                }
+
+                CurNameTable->next = NewNameTable;
+                NewNameTable->last = CurNameTable;
+                CurNameTable = NewNameTable;
             }
         }
     }
@@ -345,7 +391,6 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             printf("FUNCTION %.*s ARGC %i\n", curNTE->nameLength, curNTE->name, curNTE->argc);
             for(int i = 0; i < curNTE->argc; i++){
                 printf("\t%s %.*s\n", BuiltInTypesString[(int)curNTE->argv[i]->Type], curNTE->argv[i]->Length, curNTE->argv[i]->Source);
-                struct ParsingToken* tok = curNTE->argv[i];
                 //printf("\t%.*s (%s)\n", tok->Length, tok->Source);
             }
         }else if(curNTE->Type == tabledef_variable){

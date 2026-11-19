@@ -11,6 +11,7 @@
 #include "linked.h"
 #include "fpemdas.h"
 #include "types.h"
+#include "nametable.h"
 
 #define IMPLEMENTED_TOKENS 11
 #define IMPLEMENTED_CONDITIONALS 6

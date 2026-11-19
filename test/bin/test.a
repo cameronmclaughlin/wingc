@@ -1,4 +1,6 @@
 main:
 	call foo
+	mov rdx, 1
+	push rdx
 	call foo0
 ret
