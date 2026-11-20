@@ -205,8 +205,8 @@ void OutputASM(char* dir, struct ParsingResult* parsed){
     truncate(dir, 0);
 
     // comments
-    dprintf(asmFD, "# OS %s\n", OSStrings[globalSettings.globalOS]);
-    dprintf(asmFD, "# ARCH %s-%s\n", ArchStrings[globalSettings.globalArch], DataSizeStrings[globalSettings.globalSize]);
+    dprintf(asmFD, "; OS %s\n", OSStrings[globalSettings.globalOS]);
+    dprintf(asmFD, "; ARCH %s-%s\n", ArchStrings[globalSettings.globalArch], DataSizeStrings[globalSettings.globalSize]);
 
     ASMRegister pushReg; pushReg.AMD = rdx; pushReg.ARM = x8;
     ASMRegister bpReg; bpReg.AMD = rbp; bpReg.ARM = x29;
@@ -216,6 +216,13 @@ void OutputASM(char* dir, struct ParsingResult* parsed){
     struct LinkedListEntry* tokens = parsed->TokenList;
 
     int stackSep = DataSizeBytes[globalSettings.globalSize];
+
+    struct NameTableEntry* mainNTE = DefEntryByName(parsed->NameTable, "main", 4);
+    if(mainNTE == NULL){
+        printf("Error! No main function\n");
+        close(asmFD);
+        return;
+    }
 
     // only process text section
     /*

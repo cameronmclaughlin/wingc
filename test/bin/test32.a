@@ -1,0 +1,30 @@
+; OS LINUX
+; ARCH AMD-32
+section .text
+global _start
+_start:
+	 call main
+exit:
+	push ebp
+	mov ebp, esp
+	sub esp, 8
+	mov ecx, [ebp + 8]
+	mov [ebp - 4], ecx
+	mov eax, 1
+	mov ebx, [ebp - 4]
+	int 0x80
+	add esp, 8
+	pop ebp
+ret 4
+main:
+	push ebp
+	mov ebp, esp
+	sub esp, 8
+	mov edx, 42
+	mov [ebp - 4], edx
+	mov edx, [ebp - 4]
+	push edx
+	call exit
+	add esp, 8
+	pop ebp
+ret

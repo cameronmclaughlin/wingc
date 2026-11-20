@@ -47,7 +47,13 @@ int main(int argc, char* argv[]){
     printf("WingC %s\n", WINGC_VERSION);
     
     if(args.inputPos == 0){ printf("No input given, use -i <source file>"); return -1; }
-    printf("Compiling %s to %s", argv[args.inputPos]); if(args.outputPos != 0){ printf(" -> %s", argv[args.outputPos]); } printf("\n");
+    printf("Compiling %s to ", argv[args.inputPos]); if(args.outputPos != 0){ printf(" -> %s", argv[args.outputPos]); } printf("\n");
+
+    if(access(argv[args.inputPos], F_OK) != 0){
+        // input non existent
+        printf("ERROR: Input file %s nonexistent\n", argv[args.inputPos]);
+        return -1;
+    }
 
     struct LinkedListEntry* headEntry = LexizeFile(argv[args.inputPos]);
     if(failureFlag == true){
@@ -65,7 +71,8 @@ int main(int argc, char* argv[]){
         FreeLinkedList(parsed->ScopeList);
         return -1;
     }
-    OutputASM("test/bin/test.a", parsed);
+    OutputASM(argv[args.outputPos], parsed);
+    //printf("%s", argv[args.outputPos]);
 
     free(((struct ParsingToken*)parsed->TokenList->self)->Source);
 

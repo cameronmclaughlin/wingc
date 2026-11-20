@@ -1,5 +1,5 @@
-VMAJ = 0
-VMIN = 1
+VMAJ = 1
+VMIN = 0
 
 C = gcc
 CFLAGS = -Iinclude -DWINGC_VERSION=\"v${VMAJ}.${VMIN}\"

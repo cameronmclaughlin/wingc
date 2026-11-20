@@ -211,9 +211,9 @@ void Preprocess(Preprocessors prepType, int argc, struct ParsingToken* argv){
             cur->next = swap;
             cur = swapTail;
             tokIndex++;
-            //printf("TRUE\n");
+            printf("TRUE\n");
         }else{
-            //printf("FALSE\n");
+            printf("FALSE\n");
             FreeLinkedList(swap);
         }
         swap = CreateLinkedListEntry(sizeof(struct ParsingToken));
@@ -264,13 +264,13 @@ struct LinkedListEntry* LexizeFile(char* dir){
             // scan for preprocessing
             if(*src == '!'){
                 // dump
-                //printf("PREPROCESSOR %s\n", PrepStrings[prepType-1]);
+                printf("PREPROCESSOR %s\n", PrepStrings[prepType-1]);
                 for(int i = 0; i < prepArgc; i++){
                     struct ParsingToken* cur = &prepArgv[i];
                     if(cur->TokenType == token_name){
-                        //printf("PREP NAME ARG %.*s\n", cur->Length, cur->Source);
+                        printf("PREP NAME ARG %.*s\n", cur->Length, cur->Source);
                     }else if(cur->TokenType == token_number){
-                        //printf("PREP NUMBER ARG %.*s\n", cur->Length, cur->Source);
+                        printf("PREP NUMBER ARG %.*s\n", cur->Length, cur->Source);
                     }
                 }
                 inPreprocessor = false;
@@ -281,30 +281,28 @@ struct LinkedListEntry* LexizeFile(char* dir){
             }
 
             if(prepType == prep_none){
-                //printf("searching\n");
+                printf("searching\n");
                 // fetch type
                 for(int i = 0; i < IMPLEMENTED_PREPROCESSORS; i++){
                     if(tokenMatches(src, PrepStrings[i])){
                         prepType = (Preprocessors)i+1;
                         src+=strlen(PrepStrings[i]);
-                        //printf("Found preprocessor %s\n", PrepStrings[i]);
+                        printf("Found preprocessor %s\n", PrepStrings[i]);
                         continue;
                     }
                 }
                 if(prepType == prep_none){
-                    //printf("Unrecognized preprocessor\n");
+                    printf("Unrecognized preprocessor\n");
                     failureFlag = true;
                     return headEntry;
                 }
             }else{
                 if(!(prepArgc < PrepArgC[(int)prepType-1])){
-                    /*
                     printf(
                         "ERROR: too many preprocessor arguments. Expected %i but got %i\n",
                         PrepArgC[(int)prepType-1],
                         prepArgc+1
                     );
-                    */
                     failureFlag = true;
                     return headEntry;
                 }
@@ -313,14 +311,12 @@ struct LinkedListEntry* LexizeFile(char* dir){
                 if(isalpha(*src) || *src == '_'){
                     // name arg
                     if(PrepArgT[(int)prepType-1][prepArgc] != token_name){ 
-                        /*
                         printf(
                             "ERROR: Invalid preprocessor argument for %s. Expected %s but got %s\n",
                             PrepStrings[(int)prepType-1],
                             TokenTypeStrings[PrepArgT[(int)prepType-1][prepArgc]],
                             TokenTypeStrings[(int)token_name]
                         );
-                        */
                         failureFlag = true;
                         return headEntry;
                     }
@@ -338,14 +334,12 @@ struct LinkedListEntry* LexizeFile(char* dir){
                 }else if(isdigit(*src)){
                     // number arg
                     if(PrepArgT[(int)prepType-1][prepArgc] != token_number){ 
-                        /*
                         printf(
                             "ERROR: Invalid preprocessor argument for %s. Expected %s but got %s\n",
                             PrepStrings[(int)prepType-1],
                             TokenTypeStrings[PrepArgT[(int)prepType-1][prepArgc]],
                             TokenTypeStrings[(int)token_name]
                         );
-                        */
                         failureFlag = true;
                         return headEntry;
                     }
@@ -455,7 +449,7 @@ struct LinkedListEntry* LexizeFile(char* dir){
             cur = next;
             src++;
 
-            //printf("STRING %.*s (%i)\n", len, start, tokIndex);
+            printf("STRING %.*s (%i)\n", len, start, tokIndex);
             tokIndex++;
             goto skipscan;
         }
