@@ -1,6 +1,7 @@
 1. Add FPEMDAS
-2. Add preprocessing (!)
-3. Add ASM conversion
-4. Add assembler
-5. Add linker
-6. Create wingstd
+2. Add preprocessing (!) - COMPLETE
+3. Add ASM conversion - COMPLETE
+4. Add headers and such
+5. Add assembler
+6. Add linker
+7. Create wingstd
