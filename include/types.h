@@ -2,6 +2,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define IMPLEMENTED_TOKENS 13
+#define IMPLEMENTED_CONDITIONALS 6
+#define IMPLEMENTED_TYPES 9
+#define IMPLEMENTED_OPERATORS 6
+#define IMPLEMENTED_PREPROCESSORS 6
+
 enum ParsingTokenType{
     token_scopeStart,
     token_scopeEnd,
@@ -10,8 +16,10 @@ enum ParsingTokenType{
     token_function,
     token_while,
     token_for,
+    token_if,
     token_preprocessor,
     token_set,
+    token_asm,
     token_separator,
     token_end,
     token_type,
@@ -20,7 +28,8 @@ enum ParsingTokenType{
     token_operator,
     token_invalid,
     token_filestart,
-    token_name
+    token_name,
+    token_string
 };
 
 enum ConditionalTypes{
@@ -54,6 +63,8 @@ struct ParsingScope{
     int parentIndex;
     int index;
     struct ParsingToken* owner;
+    struct ParsingToken* nameOwner;
+    int variableDefs;
 };
 
 struct ParsingResult{
@@ -67,7 +78,8 @@ enum ContextFlags{
     context_argument = 0x2,
     context_def = 0x4,
     context_return_type = 0x8,
-    context_function = 0x10
+    context_function = 0x10,
+    context_global = 0x11
 };
 
 struct ParsingToken{
@@ -94,20 +106,67 @@ enum NameTableType{
     tabledef_variable
 };
 
+typedef enum Preprocessors{
+    prep_none,
+    prep_bytes,
+    prep_os,
+    prep_cpu,
+    prep_endif,
+    prep_ifbits,
+    prep_ifos
+} Preprocessors;
+
 struct NameTableEntry{
     char* name;
     size_t nameLength;
     int argc; // MAX 32
     struct ParsingToken* argv[32];
+    struct ParsingToken* owner;
     enum ParsingTokenType ReturnType;
     enum NameTableStatus Status;
     enum NameTableType Type;
+    int rbpOffset;
+    int pushedVars;
 };
+
+typedef enum DataSize{
+    b, // 8 bits
+    w, // 16 bits
+    d, // 32 bits
+    l  // 64 bits
+} DataSize;
+
+enum ArchTarget{
+    amd,
+    arm
+};
+
+enum OSTarget{
+    os_lnx,
+    os_bsd,
+    os_mac,
+    os_win,
+    os_bios,
+    os_uefi
+};
+
+typedef struct CompilerSettings{
+    DataSize globalSize;
+    enum OSTarget globalOS;
+    enum ArchTarget globalArch;
+} CompilerSettings;
+
+extern CompilerSettings globalSettings;
 
 extern char* TokenTypeStrings[];
 extern char* ConditionalTypeStrings[];
 extern char* BuiltInTypesString[];
 extern char* OperatorTypesString[];
+
+// config strings
+extern char* OSStrings[];
+extern char* ArchStrings[];
+extern char* DataSizeStrings[];
 
 struct TokenBinaryTree{
     enum ParsingTokenType* type;
@@ -117,3 +176,5 @@ struct TokenBinaryTree{
     struct BinaryTree* right;
     struct BinaryTree* top;
 };
+
+extern bool failureFlag;

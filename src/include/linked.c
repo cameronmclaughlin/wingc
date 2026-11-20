@@ -10,8 +10,9 @@ struct LinkedListEntry* CreateLinkedListEntry(size_t memberSize){
 }
 
 struct LinkedListEntry* LinkedListOffset(struct LinkedListEntry* entry, int offset){
-    for(int i = 0; i < offset && entry->next != NULL; i++, entry = entry->next ){}
-    return entry->next != NULL ? entry : NULL;
+    int i;
+    for(i = 0; i < offset && entry->next != NULL; i++, entry = entry->next){}
+    return (entry != NULL) && (i == offset) ? entry : NULL;
 }
 
 void FreeLinkedList(struct LinkedListEntry* start){

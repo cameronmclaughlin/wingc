@@ -1,4 +1,4 @@
-// WING COPYRIGHT Cameron McLaughlin 2026
+// WINGC COPYRIGHT Cameron McLaughlin 2026
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -50,15 +50,28 @@ int main(int argc, char* argv[]){
     printf("Compiling %s to %s", argv[args.inputPos]); if(args.outputPos != 0){ printf(" -> %s", argv[args.outputPos]); } printf("\n");
 
     struct LinkedListEntry* headEntry = LexizeFile(argv[args.inputPos]);
+    if(failureFlag == true){
+        FreeLinkedList(headEntry);
+        return -1;
+    }
     // now that lexing is done. time to parse
     printf("PARSING\n");
     struct ParsingResult* parsed = ParseFile(headEntry);
+    if(failureFlag == true){
+        free(((struct ParsingToken*)parsed->TokenList->self)->Source);
+
+        FreeLinkedList(parsed->NameTable);
+        FreeLinkedList(parsed->TokenList);
+        FreeLinkedList(parsed->ScopeList);
+        return -1;
+    }
     OutputASM("test/bin/test.a", parsed);
 
     free(((struct ParsingToken*)parsed->TokenList->self)->Source);
 
     FreeLinkedList(parsed->NameTable);
     FreeLinkedList(parsed->TokenList);
+    FreeLinkedList(parsed->ScopeList);
 
     //asmWrapperTest("test/bin/test.a");
 

@@ -12,3 +12,4 @@
 #include "linked.h"
 
 struct NameTableEntry* DefEntryByName(struct LinkedListEntry* list, char* name, size_t len);
+struct NameTableEntry* EntryByNameAndScope(struct LinkedListEntry* list, struct LinkedListEntry* scopeList, char* name, size_t len, int ScopeIndex);

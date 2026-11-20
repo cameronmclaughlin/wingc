@@ -13,10 +13,5 @@
 #include "types.h"
 #include "nametable.h"
 
-#define IMPLEMENTED_TOKENS 11
-#define IMPLEMENTED_CONDITIONALS 6
-#define IMPLEMENTED_TYPES 9
-#define IMPLEMENTED_OPERATORS 6
-
 struct ParsingResult* ParseFile(struct LinkedListEntry* entry);
 extern void DumpParsingLinkedEntry(struct LinkedListEntry* entry);

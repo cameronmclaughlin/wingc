@@ -1,7 +1,22 @@
-fn none foo();
-fn none foo0(i8 t);
+!bits 32!
+!os linux!
+!arch amd!
 
-fn none main(i8 testVar, i16 othertestvar){
-    foo();
-    foo0(1);
+fn none exit(i8 code){
+    !ifbits 64!
+        _asm "mov rax, 60";
+        _asm "mov rdi, [rbp - 8]";
+        _asm "syscall";
+    !endif!
+    
+    !ifbits 32!
+        _asm "mov eax, 1";
+        _asm "mov ebx, [ebp - 4]";
+        _asm "int 0x80";
+    !endif!
+}
+
+fn none main(){
+    i8 code = 42;
+    exit(code);
 }

@@ -3,21 +3,58 @@
 ## Stages
 - Lexing
 	- Converts source code to a token
-	- Preprocessing 
+	- Preprocessing
+		- Identifies preprocessing macros and applies them to the context
 - Parsing
 	- Makes a token list from the lexing stage ready for conversion
 - Conversion
 	- Converts a token list from the parsing stage into an assembly file
 - Assembler
 	- Converts assembly files from the conversion stage into a single executable
-
 ## Lexing
 Lexing is kinda beginner but I'll improve later. Just loops through every character in source ignoring whitespaces. Checks for keywords, operators, condtionals, and types. If it's not in the token category but it starts with an alphabet character, it see's it as a string. If starts with a digit, it see's it as a digit.
+### Preprocessing
+Determines what get's passed into the lexer and what doesn't. Also configures certain aspects of the compiler. Practically its own mini lexer. Uses the ! keyword. Preprocessors:
+- bits
+	- Specifies the bit count
+	- usage: !bits i!
+	- possible inputs
+		- i
+			- 16
+			- 32
+			- 64	
+- os
+	- Specifies target OS
+	- usage: !os s!
+	- possible inputs
+		- s
+			- lnx / linux
+			- bsd / freebsd
+			- mac / macos / mach / apple
+			- win / windows
+			- bios
+			- uefi
+- arch
+	- Specifies target CPU architecture
+	- usage: !arch s!
+	- possible inputs
+		- s
+			- amd
+			- arm
+- endif
+	- Ends an if
+	- usage: !endif!
+- ifbits
+	- Executes code between it and !endif! if the condition matches
+	- usage: !ifbits i!
+	- possible inputs
+		- i
+			- 16
+			- 32
+			- 64
 ## Parsing
 Parsing is a lil more complex. Not as complete.
 Parsing Steps:
-- Preprocessing
-	- Identifies preprocessing macros and applies them to the context
 - Scoping
 	- Goes through tokens, creates scopes. Assigns the current scope to each token it see's.
 - Ordering
@@ -79,5 +116,10 @@ Parsing Steps:
 
 ## Convention
 The calling convention is custom because I didn't want to re-learn GCC conventions after ChOS.
-### Arguments
-Arguments are pushed into the stack in reverse order and then popped by the function into memory. This isn't thread safe (yet, will improve).
+Okay so when a function is called, it pushes rbp then sets it to rsp to create the new stack frame. After that it does sub rsp, (8 * varc) + (8 * argc).
+Going to need to keep stack alignment to not fuck up special instructions.
+### Variables
+#### Local (scope > 0)
+For local variables, they are kept behind %rbp
+#### Global (scope == 0)
+For global variables, theya are kept in the .data section

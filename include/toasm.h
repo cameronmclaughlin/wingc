@@ -12,11 +12,6 @@
 #include "linked.h"
 #include "nametable.h"
 
-enum ArchTarget{
-    amd,
-    arm
-};
-
 enum AMDRegisters{
     rax, // used for math (1st input, store)
     rbx, // used for math (2nd input)
@@ -47,13 +42,6 @@ typedef struct ASMRegister{
     enum AMDRegisters AMD;
     enum ARMRegisters ARM;
 } ASMRegister;
-
-typedef enum DataSize{
-    b, // 8 bits
-    w, // 16 bits
-    d, // 32 bits
-    l  // 64 bits
-} DataSize;
 
 // wrappers
 void asm_movrr(ASMRegister* set, ASMRegister* give);

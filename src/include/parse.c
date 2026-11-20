@@ -36,7 +36,13 @@ int checkExpecting(struct LinkedListEntry* entry){
         printf("TOKEN NAME\n");
         enum ParsingTokenType order0[2] = {token_name, token_operator};
         enum ParsingTokenType order1[2] = {token_name, token_argumentStart};
-        return (tokenOrderMatches(entry, order0, 2) || tokenOrderMatches(entry, order1, 2)) ? 2 : -1;
+        enum ParsingTokenType order2[2] = {token_name, token_argumentEnd};
+        return (
+            tokenOrderMatches(entry, order0, 2) || 
+            tokenOrderMatches(entry, order1, 2) || 
+            tokenOrderMatchesReverse(entry, order1, 2) ||
+            tokenOrderMatches(entry, order2, 2)
+        ) ? 2 : -1;
     }else if(tok->TokenType == token_type){
         printf("TOKEN TYPE\n");
         enum ParsingTokenType order0[3] = {token_type, token_name, token_end};
@@ -71,8 +77,10 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
         // go through every token and set up the scopes, linking the scope index to each
     int length = 1;
     struct LinkedListEntry* curScope = scopes;
+    struct LinkedListEntry* curScopeIndex = scopes;
     struct LinkedListEntry* cur = entry;
     struct ParsingToken* lastSeenScopeOwner;
+    struct ParsingToken* lastSeenScopeOwnerName;
     while(cur != NULL){
         struct ParsingToken* curToken = (struct ParsingToken*)cur->self;
         // now assign the current token to the new scope
@@ -85,14 +93,28 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
         ){
             // owner
             lastSeenScopeOwner = curToken;
+            if(curToken->TokenType == token_function){
+                lastSeenScopeOwnerName = (struct ParsingToken*)cur->next->self;
+            }
         }else if(curToken->TokenType == token_scopeStart){
             struct LinkedListEntry* newScope = CreateLinkedListEntry(sizeof(struct ParsingScope));
             ((struct ParsingScope*)newScope->self)->index = length++;
             ((struct ParsingScope*)newScope->self)->parentIndex = ((struct ParsingScope*)curScope->self)->index;
             ((struct ParsingScope*)newScope->self)->owner = lastSeenScopeOwner;
-            curScope->next = newScope;
-            newScope->last = curScope;
+            ((struct ParsingScope*)newScope->self)->nameOwner = lastSeenScopeOwnerName;
+            curScopeIndex->next = newScope;
+            newScope->last = curScopeIndex;
             curScope = newScope;
+            curScopeIndex = newScope;
+            // scan back until function name, set the scoping to every one of those tokens to cur
+            enum ParsingTokenType functionOrder[] = {token_name, token_type, token_function};
+            for(struct LinkedListEntry* fnScan = cur; fnScan != NULL; fnScan = fnScan->last){
+                struct ParsingToken* fnScanTok = (struct ParsingToken*)fnScan->self;
+                fnScanTok->Scope = ((struct ParsingScope*)curScope->self);
+                if(fnScanTok->TokenType == token_name && tokenOrderMatchesReverse(fnScan, functionOrder, 3)){
+                    break;
+                }
+            }
         }else if(curToken->TokenType == token_scopeEnd){
             curScope = (struct LinkedListEntry*)(LinkedListOffset(scopes, ((struct ParsingScope*)curScope->self)->parentIndex));
         }
@@ -110,7 +132,7 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
     cur = entry;
     while(cur != NULL){
         int expect = checkExpecting(cur);
-        if(expect == -1){ printf("ERR TOKEN %s at INDEX %i\n", TokenTypeStrings[((struct ParsingToken*)cur->self)->TokenType], index); return NULL; }
+        if(expect == -1){ printf("ERR TOKEN %.*s (%s) at INDEX %i\n", ((struct ParsingToken*)cur->self)->Length, ((struct ParsingToken*)cur->self)->Source, TokenTypeStrings[((struct ParsingToken*)cur->self)->TokenType], index); return NULL; }
         index+=expect;
         cur = LinkedListOffset(entry, index);
     }
@@ -136,8 +158,7 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             enum ParsingTokenType order2[2] = {token_number, token_separator}; // FWD & BWD
             if( tokenOrderMatches(cur, order0, 2) || 
                 tokenOrderMatches(cur, order1, 2) ||
-                tokenOrderMatches(cur, order2, 2) ||
-                tokenOrderMatchesReverse(cur, order0, 2)
+                tokenOrderMatches(cur, order2, 2)
             ){
                 curTok->Context |= context_argument;
                 printf("FOUND NUMBER ARGUMENT %.*s\n", curTok->Length, curTok->Source);
@@ -208,8 +229,6 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             if(tokenOrderMatchesReverse(cur, returnOrder, 2)){
                 curTok->Context |= context_return_type;
                 cur = cur->next;
-                // set cur->next context to have function since its a name
-                //((struct ParsingToken*)cur->self)->Context |= context_function;
                 printf("FOUND RETURN TYPE %.*s\n", curTok->Length, curTok->Source);
                 continue;
             }
@@ -221,6 +240,26 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
                 struct ParsingToken* nextTok = ((struct ParsingToken*)cur->next->self);
                 nextTok->Type = curTok->Type;
                 curTok->Context |= context_def;
+                nextTok->Context |= context_def;
+                printf("%i\n", curTok->Scope->index);
+                if(curTok->Scope->index == 0){
+                    curTok->Context |= context_global;
+                }else{
+                    // wow it's a member. trace back it's scope until function def and increment the def's variableDefs
+                    struct LinkedListEntry* curScopeList;
+                    for(
+                        curScopeList = LinkedListOffset(scopes, curTok->Scope->index); 
+                        curScopeList != NULL; 
+                        curScopeList = curScopeList->last
+                    ){
+                        struct ParsingScope* curScope = (struct ParsingScope*)curScopeList->self;
+                        if(curScope->owner->TokenType == token_function){
+                            curScope->variableDefs++;
+                            printf("%i->variableDefs++ (%i)\n", curScope->index, curScope->variableDefs);
+                            break;
+                        }
+                    }
+                }
                 printf("FOUND VARIABLE DEF %.*s TYPE %.*s\n", nextTok->Length, nextTok->Source, curTok->Length, curTok->Source);
                 continue;
             }
@@ -245,6 +284,7 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             nte->name = nameTok->Source;
             nte->nameLength = nameTok->Length;
             nte->Type = tabledef_function;
+            nte->owner = nameTok;
             nte->ReturnType = ((struct ParsingToken*)cur->next->self)->Type;
             // next token should be token_type with context flag of context_return_type
             struct ParsingToken* retTypeTok = ((struct ParsingToken*)cur->next->self);
@@ -325,8 +365,16 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             nte->name = nameTok->Source;
             nte->nameLength = nameTok->Length;
             nte->Type = tabledef_variable;
-            nte->argc = 1;
-            nte->argv[0] = nameTok;
+            nte->owner = nameTok;
+
+            // orders for defined vs promised
+            enum ParsingTokenType defOrder[] = {token_type, token_name, token_set};
+            enum ParsingTokenType promiseOrder[] = {token_type, token_name, token_end};
+            if(tokenOrderMatches(cur, defOrder, 3)){
+                nte->Status = table_definition;
+            }else if(tokenOrderMatches(cur, promiseOrder, 3)){
+                nte->Status = table_promise;
+            }
 
             CurNameTable->next = NewNameTable;
             NewNameTable->last = CurNameTable;
@@ -383,7 +431,7 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
             }
         }
     }
-    // loop through nametable and get all data
+    // loop through nametable and get dump data
     struct LinkedListEntry* curTable = NameTable;
     for(curTable = NameTable; curTable != NULL; curTable = curTable->next){
         struct NameTableEntry* curNTE = (struct NameTableEntry*)curTable->self;
@@ -394,7 +442,14 @@ struct ParsingResult* ParseFile(struct LinkedListEntry* entry){
                 //printf("\t%.*s (%s)\n", tok->Length, tok->Source);
             }
         }else if(curNTE->Type == tabledef_variable){
-            printf("VARIABLE %.*s TYPE %s\n", curNTE->nameLength, curNTE->name, BuiltInTypesString[(int)curNTE->argv[0]->Type]);
+            printf(
+                "VARIABLE %.*s TYPE %s (%i/%i)\n", 
+                curNTE->nameLength, 
+                curNTE->name, 
+                BuiltInTypesString[(int)curNTE->owner->Type], 
+                curNTE->owner->Scope->index,
+                curNTE->owner->Scope->parentIndex
+            );
         }
     }
 
